@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🛡️ 防災マップ | Be-kan 備館</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--sb-bg:#e8f5e9;--sb-hd:#c8e6c9;--sb-hv:#dcedc8;--sb-bd:#b9d4b9;--g9:#1b5e20;--g7:#2e7d32;--g5:#43a047;--g4:#66bb6a;--g2:#a5d6a7;--g1:#c8e6c9;--g0:#e8f5e9;--fd:'IBM Plex Sans','Noto Sans JP',sans-serif;--fb:'Noto Sans JP',sans-serif}
+body{font-family:var(--fb);overflow:hidden;background:#0F1923}
+.app{display:flex;height:100vh;width:100vw}
+.sidebar{width:340px;min-width:340px;background:var(--sb-bg);display:flex;flex-direction:column;border-right:1px solid var(--sb-bd);z-index:10;transition:transform .3s cubic-bezier(.4,0,.2,1),width .3s,min-width .3s}
+.sidebar.collapsed{transform:translateX(-340px);width:0;min-width:0;overflow:hidden}
+.sb-hd{background:var(--sb-hd);padding:16px 20px;border-bottom:1px solid var(--g2);flex-shrink:0}
+.sb-hd h1{font-family:var(--fd);font-size:18px;font-weight:700;color:var(--g9);margin:0 0 2px;letter-spacing:.5px}
+.sb-hd p{font-size:11px;color:#4a7c4f;margin:0}
+.sb-sr{padding:8px 16px;border-bottom:1px solid var(--sb-bd);flex-shrink:0}
+.sb-sr input{width:100%;padding:8px 12px;border:1px solid var(--g2);border-radius:8px;font-size:12px;background:#fff;font-family:var(--fb);outline:none}
+.sb-sr input:focus{border-color:var(--g5)}
+.sb-sr input::placeholder{color:var(--g2)}
+.sb-bd2{flex:1;overflow-y:auto;padding:4px 0}
+.sb-bd2::-webkit-scrollbar{width:6px}
+.sb-bd2::-webkit-scrollbar-thumb{background:var(--g2);border-radius:3px}
+.ch{display:flex;align-items:center;gap:8px;padding:10px 16px;cursor:pointer;user-select:none;font-size:11px;font-weight:700;color:var(--g7);text-transform:uppercase;letter-spacing:1.2px;transition:background .15s}
+.ch:hover{background:var(--sb-hv)}
+.ch .cv{margin-left:auto;font-size:9px;transition:transform .2s;color:var(--g4)}
+.ch .cv.o{transform:rotate(90deg)}
+.cc{background:var(--g1);color:var(--g7);font-size:9px;padding:1px 6px;border-radius:8px;font-weight:600}
+.li{display:flex;align-items:center;gap:10px;padding:7px 16px 7px 28px;cursor:pointer;transition:background .12s;border-left:3px solid transparent}
+.li:hover{background:var(--sb-hv)}
+.li.a{background:var(--g1);border-left-color:var(--g5)}
+.tg{width:36px;height:20px;border-radius:10px;background:#bdbdbd;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.tg.on{background:var(--g5)}
+.tg::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.tg.on::after{transform:translateX(16px)}
+.cdt{width:12px;height:12px;border-radius:50%;flex-shrink:0;border:2px solid rgba(0,0,0,.1)}
+.lin{flex:1;min-width:0}
+.ln{font-size:12px;font-weight:500;color:var(--g9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ld2{font-size:10px;color:var(--g4);margin-top:1px}
+.ll{font-size:10px;color:#f57c00;font-weight:500}
+.le{font-size:10px;color:#d32f2f;font-weight:500}
+.sf{padding:10px 16px;font-size:10px;color:#4a7c4f;border-top:1px solid var(--sb-bd);background:#dcedc8;flex-shrink:0;line-height:1.6}
+.ma{flex:1;position:relative}
+#map{width:100%;height:100%}
+.stb{position:absolute;top:12px;left:12px;z-index:20;width:42px;height:42px;border-radius:10px;background:rgba(255,255,255,.95);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--g9);box-shadow:0 2px 12px rgba(0,0,0,.12)}
+.stb:hover{background:var(--g0)}
+.sbar{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);z-index:15;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);border-radius:14px;padding:8px 22px;font-size:12px;color:var(--g7);box-shadow:0 4px 20px rgba(0,0,0,.1);display:flex;align-items:center;gap:14px;font-weight:500;white-space:nowrap}
+.sdot{width:8px;height:8px;border-radius:50%;animation:pu 2s infinite;flex-shrink:0}
+@keyframes pu{0%,100%{opacity:1}50%{opacity:.35}}
+.zw{position:absolute;top:64px;left:50%;transform:translateX(-50%);z-index:15;background:rgba(255,152,0,.94);color:#fff;padding:8px 22px;border-radius:10px;font-size:12px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.12);pointer-events:none}
+.lgd{position:absolute;bottom:76px;right:14px;z-index:15;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);border-radius:12px;padding:14px 18px;box-shadow:0 4px 20px rgba(0,0,0,.1);max-height:320px;overflow-y:auto;min-width:190px}
+.lgd h3{font-size:10px;font-weight:700;color:var(--g9);text-transform:uppercase;letter-spacing:1.2px;margin:0 0 8px}
+.lgi{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:11px;color:#37474f}
+.lgs{width:14px;height:14px;border-radius:3px;flex-shrink:0;border:1px solid rgba(0,0,0,.08)}
+.lgs.c{border-radius:50%}
+.maplibregl-popup-content{background:rgba(255,255,255,.98)!important;border-radius:12px!important;padding:14px 18px!important;box-shadow:0 8px 30px rgba(0,0,0,.15)!important;font-family:var(--fb)!important;max-width:340px!important}
+.pt{font-size:14px;font-weight:700;color:var(--g9);margin-bottom:8px;border-bottom:2px solid var(--g2);padding-bottom:6px}
+.pr{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;gap:12px}
+.pl{color:#757575;white-space:nowrap;flex-shrink:0}
+.pv{color:#212121;font-weight:500;text-align:right;word-break:break-all}
+.sp{position:absolute;top:0;left:0;right:0;bottom:0;z-index:100;background:rgba(27,94,32,.92);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;transition:opacity .5s}
+.sp.h{opacity:0;pointer-events:none}
+.spc{background:#fff;border-radius:20px;padding:40px 36px;max-width:420px;width:90%;box-shadow:0 30px 60px rgba(0,0,0,.3);text-align:center}
+.spc h2{font-family:var(--fd);font-size:24px;color:var(--g9);margin:0 0 6px;font-weight:700}
+.spc p{font-size:13px;color:#666;margin:0 0 20px;line-height:1.6}
+.spi{width:32px;height:32px;border:3px solid var(--g2);border-top-color:var(--g5);border-radius:50%;animation:spn .8s linear infinite;margin:0 auto 12px}
+@keyframes spn{to{transform:rotate(360deg)}}
+@media(max-width:768px){.sidebar{position:absolute;left:0;top:0;height:100%;z-index:30;width:300px;min-width:300px;box-shadow:0 25px 50px rgba(0,0,0,.4)}.sidebar.collapsed{transform:translateX(-300px)}.lgd{display:none}.sbar{font-size:11px;padding:6px 14px;gap:10px}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar" id="sidebar">
+<div class="sb-hd"><h1>🛡️ 防災マップ</h1><p>不動産情報ライブラリ API × 20レイヤー</p></div>
+<div class="sb-sr"><input type="text" id="sInput" placeholder="🔍 レイヤーを検索..."></div>
+<div class="sb-bd2" id="lList"></div>
+<div class="sf">出典：国土交通省 不動産情報ライブラリ API<br>© Be-kan 備館 | Powered by MapLibre GL</div>
+</aside>
+<main class="ma">
+<button class="stb" id="sTog">◀</button>
+<div id="map"></div>
+<div class="sbar"><div class="sdot" id="sDot" style="background:#48BB78"></div><span id="sTxt">準備中...</span><span id="sZm" style="color:#9e9e9e">Z13</span></div>
+<div id="zW" class="zw" style="display:none"></div>
+<div class="lgd" id="leg" style="display:none"></div>
+<div class="sp" id="splash"><div class="spc"><h2>🛡️ 防災マップ</h2><p>地図を読み込み中...</p><div class="spi"></div><p style="font-size:11px;color:#999">node server.js → http://localhost:3456</p></div></div>
+</main>
+</div>
+<script>
+(function(){
+  var s=document.createElement("script");
+  s.src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js";
+  s.onload=function(){initApp()};
+  s.onerror=function(){
+    var s2=document.createElement("script");
+    s2.src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js";
+    s2.onload=function(){initApp()};
+    s2.onerror=function(){document.getElementById("splash").innerHTML='<div class="spc"><h2>エラー</h2><p>MapLibreの読み込みに失敗しました</p></div>'};
+    document.body.appendChild(s2);
+  };
+  document.body.appendChild(s);
+})();
+
+function initApp(){
+// ローカルプロキシ経由でAPI呼び出し（server.jsが /api を中継）
+var LS=[
+{id:"disaster-zone",a:"XKT016",n:"災害危険区域",c:"disaster",ic:"🔴",co:"#C53030",fi:"#FC8181",op:.35,mz:11,xz:15,g:"polygon",f:[{k:"A48_001",l:"都道府県"},{k:"A48_002",l:"市町村"},{k:"A48_005_ja",l:"区域名"},{k:"A48_007_name_ja",l:"指定理由"},{k:"A48_008_ja",l:"詳細"}],d:"建築基準法に基づく災害危険区域",on:false},
+{id:"liquefaction",a:"XKT025",n:"液状化の発生傾向",c:"disaster",ic:"🟡",co:"#D69E2E",fi:"#F6E05E",op:.4,mz:11,xz:15,g:"polygon",f:[{k:"topographic_classification_name_ja",l:"微地形区分"},{k:"note",l:"液状化傾向"},{k:"liquefaction_tendency_level",l:"レベル"}],d:"地形区分に基づく液状化",on:false},
+{id:"flood",a:"XKT026",n:"洪水浸水想定区域",c:"disaster",ic:"🔵",co:"#2B6CB0",fi:"#63B3ED",op:.4,mz:14,xz:15,g:"polygon",f:[{k:"A31a_202",l:"河川名"},{k:"A31a_204",l:"管理者"},{k:"A31a_205",l:"浸水深ランク"}],d:"想定最大規模の洪水浸水想定",on:true},
+{id:"storm-surge",a:"XKT027",n:"高潮浸水想定区域",c:"disaster",ic:"🌊",co:"#2C5282",fi:"#90CDF4",op:.35,mz:14,xz:15,g:"polygon",f:[{k:"A31b_101",l:"都道府県"},{k:"A31b_103",l:"浸水深ランク"}],d:"高潮による浸水想定区域",on:false},
+{id:"tsunami",a:"XKT028",n:"津波浸水想定",c:"disaster",ic:"🌊",co:"#1A365D",fi:"#BEE3F8",op:.4,mz:14,xz:15,g:"polygon",f:[{k:"A31c_101",l:"都道府県"},{k:"A31c_103",l:"浸水深ランク"}],d:"津波による浸水想定区域",on:false},
+{id:"sediment",a:"XKT029",n:"土砂災害警戒区域",c:"disaster",ic:"🟤",co:"#744210",fi:"#D69E2E",op:.4,mz:14,xz:15,g:"polygon",f:[{k:"A33_001",l:"区域名"},{k:"A33_003_name_ja",l:"現象の種類"},{k:"A33_004_name_ja",l:"区分"}],d:"土砂災害警戒・特別警戒区域",on:true},
+{id:"landslide",a:"XKT021",n:"地すべり防止地区",c:"disaster",ic:"🟠",co:"#C05621",fi:"#ED8936",op:.35,mz:11,xz:15,g:"polygon",f:[{k:"A24_001",l:"名称"},{k:"A24_003_ja",l:"所管省庁"},{k:"A24_004",l:"都道府県"}],d:"地すべり防止区域",on:false},
+{id:"steep-slope",a:"XKT022",n:"急傾斜地崩壊危険区域",c:"disaster",ic:"🔶",co:"#9C4221",fi:"#FBD38D",op:.35,mz:11,xz:15,g:"polygon",f:[{k:"A25_001",l:"名称"},{k:"A25_003",l:"都道府県"}],d:"急傾斜地崩壊防止区域",on:false},
+{id:"evacuation",a:"XGT001",n:"指定緊急避難場所",c:"disaster",ic:"🏥",co:"#276749",fi:"#48BB78",op:.8,mz:11,xz:15,g:"point",f:[{k:"facility_name_ja",l:"施設名"},{k:"address_ja",l:"住所"},{k:"flood_flag",l:"洪水"},{k:"earthquake_flag",l:"地震"},{k:"tsunami_flag",l:"津波"},{k:"landslide_flag",l:"崖崩れ等"},{k:"large_fire_flag",l:"大規模火事"},{k:"inland_flooding_flag",l:"内水氾濫"},{k:"remarks",l:"備考"}],d:"指定緊急避難場所",on:true},
+{id:"disaster-history",a:"XST001",n:"災害履歴",c:"disaster",ic:"📜",co:"#702459",fi:"#D53F8C",op:.3,mz:9,xz:15,g:"polygon",f:[{k:"disaster_name_ja",l:"災害種別"},{k:"disaster_date",l:"発生年月日"},{k:"disaster_source",l:"資料名"}],d:"過去の災害履歴",on:false},
+{id:"fire-prevention",a:"XKT014",n:"防火・準防火地域",c:"urban",ic:"🔥",co:"#E53E3E",fi:"#FEB2B2",op:.3,mz:11,xz:15,g:"polygon",f:[{k:"fire_prevention_name_ja",l:"区分"}],d:"防火地域・準防火地域",on:false},
+{id:"district-plan",a:"XKT023",n:"地区計画",c:"urban",ic:"📐",co:"#4299E1",fi:"#BEE3F8",op:.25,mz:11,xz:15,g:"polygon",f:[{k:"district_plan_name_ja",l:"地区計画名"}],d:"地区計画",on:false},
+{id:"high-use",a:"XKT024",n:"高度利用地区",c:"urban",ic:"🏢",co:"#667EEA",fi:"#C3DAFE",op:.25,mz:11,xz:15,g:"polygon",f:[{k:"high_use_district_name_ja",l:"地区名"}],d:"高度利用地区",on:false},
+{id:"urban-road",a:"XKT030",n:"都市計画道路",c:"urban",ic:"🛣️",co:"#4A5568",fi:"#A0AEC0",op:.3,mz:11,xz:15,g:"line",f:[{k:"urban_road_name_ja",l:"路線名"}],d:"都市計画道路",on:false},
+{id:"library",a:"XKT017",n:"図書館",c:"facility",ic:"📚",co:"#38A169",fi:"#68D391",op:.8,mz:11,xz:15,g:"point",f:[{k:"P27_003",l:"名称"},{k:"P27_004",l:"住所"}],d:"図書館",on:false},
+{id:"city-hall",a:"XKT018",n:"市区町村役場等",c:"facility",ic:"🏛️",co:"#2F855A",fi:"#9AE6B4",op:.8,mz:11,xz:15,g:"point",f:[{k:"P05_003",l:"名称"},{k:"P05_004",l:"住所"}],d:"市区町村役場・集会施設",on:false},
+{id:"natural-park",a:"XKT019",n:"自然公園地域",c:"facility",ic:"🌿",co:"#22543D",fi:"#C6F6D5",op:.25,mz:11,xz:15,g:"polygon",f:[{k:"A10_002_ja",l:"公園名"},{k:"A10_003_ja",l:"地域種別"}],d:"自然公園",on:false},
+{id:"station",a:"XKT015",n:"駅別乗降客数",c:"population",ic:"🚉",co:"#6B46C1",fi:"#D6BCFA",op:.8,mz:11,xz:15,g:"point",f:[{k:"S12_001",l:"駅名"},{k:"S12_002_ja",l:"運営会社"},{k:"S12_033",l:"乗降客数"}],d:"鉄道駅の乗降客数",on:false},
+{id:"did-area",a:"XKT031",n:"人口集中地区",c:"population",ic:"👥",co:"#553C9A",fi:"#E9D8FD",op:.2,mz:11,xz:15,g:"polygon",f:[{k:"A16_002",l:"都道府県"},{k:"A16_003",l:"市区町村"}],d:"人口集中地区（DID）",on:false},
+{id:"large-fill",a:"XKT020",n:"大規模盛土造成地",c:"terrain",ic:"⛰️",co:"#975A16",fi:"#ECC94B",op:.35,mz:11,xz:15,g:"polygon",f:[{k:"L2_001_ja",l:"種別"},{k:"L2_003",l:"都道府県"},{k:"L2_004",l:"市区町村"}],d:"大規模盛土造成地",on:false}
+];
+var CS=[{id:"disaster",l:"防災情報",ic:"⚠️"},{id:"urban",l:"都市計画情報",ic:"🏙️"},{id:"facility",l:"周辺施設情報",ic:"🏛️"},{id:"population",l:"人口情報等",ic:"👥"},{id:"terrain",l:"地形情報",ic:"⛰️"}];
+var map,sbOpen=true,exCat=new Set(["disaster"]),stObj={},ldSet=new Set(),erSet=new Set(),fcObj={},dcObj={},dtTimer=null;
+LS.forEach(function(l){stObj[l.id]=l.on});
+
+function sl(ms){return new Promise(function(r){setTimeout(r,ms)})}
+function l2t(la,ln,z){var n=Math.pow(2,z);return{x:Math.floor(((ln+180)/360)*n),y:Math.floor((1-Math.log(Math.tan(la*Math.PI/180)+1/Math.cos(la*Math.PI/180))/Math.PI)/2*n),z:z}}
+function b2t(b,z){var t=l2t(b.getNorth(),b.getWest(),z),r=l2t(b.getSouth(),b.getEast(),z),a=[],c=0;for(var x=t.x;x<=r.x&&c<12;x++)for(var y=t.y;y<=r.y&&c<12;y++){a.push({x:x,y:y,z:z});c++}return a}
+
+function fTile(api,z,x,y){
+  var k=api+"/"+z+"/"+x+"/"+y;
+  if(dcObj[k])return Promise.resolve(dcObj[k]);
+  // ローカルプロキシ経由（server.js の /api エンドポイント）
+  return fetch("/api/reinfolib?apiId="+api+"&z="+z+"&x="+x+"&y="+y)
+    .then(function(r){return r.text()})
+    .then(function(txt){
+      if(!txt)return null;
+      var d;try{d=JSON.parse(txt)}catch(e){return null}
+      if(d&&d.type==="FeatureCollection"){dcObj[k]=d;return d}
+      if(Array.isArray(d)){var e={type:"FeatureCollection",features:[]};dcObj[k]=e;return e}
+      return null;
+    }).catch(function(){return null});
+}
+
+function fSeq(api,tiles){
+  var all=[],i=0;
+  function next(){
+    if(i>=tiles.length)return Promise.resolve(all);
+    var t=tiles[i];i++;
+    return fTile(api,t.z,t.x,t.y).then(function(d){
+      if(d&&d.features)all=all.concat(d.features);
+      return sl(200).then(next);
+    });
+  }
+  return next();
+}
+
+function loadL(l){
+  if(!map)return;
+  var zm=map.getZoom(),az=Math.max(l.mz,Math.min(l.xz,Math.floor(zm)));
+  if(zm<l.mz-1)return;
+  ldSet.add(l.id);erSet.delete(l.id);rS();uSt();
+  fSeq(l.a,b2t(map.getBounds(),az)).then(function(af){
+    var gj={type:"FeatureCollection",features:af},si=l.id+"-src",ex=map.getSource(si);
+    if(ex){ex.setData(gj)}else{
+      map.addSource(si,{type:"geojson",data:gj});
+      if(l.g==="point")map.addLayer({id:l.id+"-ci",type:"circle",source:si,paint:{"circle-radius":["interpolate",["linear"],["zoom"],11,4,15,8],"circle-color":l.co,"circle-stroke-color":"#fff","circle-stroke-width":2,"circle-opacity":.9}});
+      else if(l.g==="line")map.addLayer({id:l.id+"-ln",type:"line",source:si,paint:{"line-color":l.co,"line-width":3,"line-opacity":.7}});
+      else{map.addLayer({id:l.id+"-fl",type:"fill",source:si,paint:{"fill-color":l.fi,"fill-opacity":l.op}});map.addLayer({id:l.id+"-ol",type:"line",source:si,paint:{"line-color":l.co,"line-width":1.5,"line-opacity":.5}})}
+      var ci=l.g==="point"?l.id+"-ci":l.g==="line"?l.id+"-ln":l.id+"-fl";
+      if(map.getLayer(ci)){
+        map.on("click",ci,function(e){if(!e.features||!e.features.length)return;var p=e.features[0].properties,h='<div class="pt">'+l.ic+" "+l.n+"</div>";l.f.forEach(function(fld){var v=p[fld.k];if(v===undefined||v===null||v==="")return;if(v===true||v==="true")v="✅ 対応";if(v===false||v==="false")v="— 非対応";h+='<div class="pr"><span class="pl">'+fld.l+'</span><span class="pv">'+v+"</span></div>"});new maplibregl.Popup({maxWidth:"340px"}).setLngLat(e.lngLat).setHTML(h).addTo(map)});
+        map.on("mouseenter",ci,function(){map.getCanvas().style.cursor="pointer"});
+        map.on("mouseleave",ci,function(){map.getCanvas().style.cursor=""});
+      }
+    }
+    fcObj[l.id]=af.length;ldSet.delete(l.id);rS();uSt();uLg();
+  }).catch(function(){erSet.add(l.id);ldSet.delete(l.id);rS();uSt()});
+}
+
+function rmL(l){if(!map)return;[l.id+"-ci",l.id+"-fl",l.id+"-ol",l.id+"-ln"].forEach(function(i){if(map.getLayer(i))map.removeLayer(i)});if(map.getSource(l.id+"-src"))map.removeSource(l.id+"-src");delete fcObj[l.id];uLg();uSt()}
+function loadAll(){LS.forEach(function(l){if(stObj[l.id])loadL(l)})}
+
+function rS(){
+  var c=document.getElementById("lList"),sv=(document.getElementById("sInput").value||"").toLowerCase(),h="";
+  CS.forEach(function(cat){var cls=LS.filter(function(l){return l.c===cat.id}),flt=sv?cls.filter(function(l){return l.n.indexOf(sv)>=0||l.d.indexOf(sv)>=0}):cls;if(sv&&!flt.length)return;var isE=exCat.has(cat.id)||!!sv,ac=cls.filter(function(l){return stObj[l.id]}).length;
+  h+='<div class="ch" data-c="'+cat.id+'"><span>'+cat.ic+"</span><span>"+cat.l+"</span>"+(ac>0?'<span class="cc">'+ac+"/"+cls.length+"</span>":"")+'<span class="cv'+(isE?" o":"")+'">▶</span></div>';
+  if(isE)(sv?flt:cls).forEach(function(l){var on=stObj[l.id],ld=ldSet.has(l.id),er=erSet.has(l.id),cn=fcObj[l.id],sub=l.d;if(ld)sub='<span class="ll">⏳ 読込中...</span>';else if(er)sub='<span class="le">⚠️ 取得エラー</span>';else if(on&&cn!==undefined)sub=cn>0?cn+"件のデータ":"この範囲にデータなし";
+  h+='<div class="li'+(on?" a":"")+'" data-l="'+l.id+'"><div class="tg'+(on?" on":"")+'"></div><div class="cdt" style="background:'+l.fi+";border-color:"+l.co+'"></div><div class="lin"><div class="ln">'+l.ic+" "+l.n+'</div><div class="ld2">'+sub+"</div></div></div>"})});
+  c.innerHTML=h;
+  c.querySelectorAll(".ch").forEach(function(el){el.addEventListener("click",function(){var ct=el.dataset.c;if(exCat.has(ct))exCat.delete(ct);else exCat.add(ct);rS()})});
+  c.querySelectorAll(".li").forEach(function(el){el.addEventListener("click",function(){var id=el.dataset.l,l=LS.find(function(x){return x.id===id});if(!l)return;stObj[id]=!stObj[id];if(stObj[id])loadL(l);else rmL(l);rS()})});
+}
+function uLg(){var a=LS.filter(function(l){return stObj[l.id]}),el=document.getElementById("leg");if(!a.length){el.style.display="none";return}el.style.display="block";var h='<h3>凡例</h3>';a.forEach(function(l){h+='<div class="lgi"><div class="lgs'+(l.g==="point"?" c":"")+'" style="background:'+l.fi+";border:2px solid "+l.co+'"></div><span>'+l.n+"</span></div>"});el.innerHTML=h}
+function uSt(){var a=LS.filter(function(l){return stObj[l.id]}),ld=ldSet.size;document.getElementById("sDot").style.background=ld>0?"#F6AD55":"#48BB78";document.getElementById("sTxt").textContent=ld>0?ld+"レイヤー読込中...":a.length+"レイヤー表示中";if(map)document.getElementById("sZm").textContent="Z"+Math.floor(map.getZoom());var nz=a.some(function(l){return map&&map.getZoom()<l.mz-1}),zw=document.getElementById("zW");if(nz){zw.textContent="🔍 一部レイヤーはもう少しズームインすると表示されます";zw.style.display="block"}else zw.style.display="none"}
+
+map=new maplibregl.Map({container:"map",style:{version:8,sources:{gsi:{type:"raster",tiles:["https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png"],tileSize:256,attribution:'<a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>'}},layers:[{id:"gsi",type:"raster",source:"gsi",minzoom:0,maxzoom:18}]},center:[139.7671,35.6812],zoom:13,maxZoom:18,minZoom:5});
+map.addControl(new maplibregl.NavigationControl(),"top-right");
+map.addControl(new maplibregl.GeolocateControl({positionOptions:{enableHighAccuracy:true},trackUserLocation:true}),"top-right");
+map.addControl(new maplibregl.ScaleControl({maxWidth:200}),"bottom-left");
+map.on("load",function(){document.getElementById("splash").classList.add("h");setTimeout(function(){document.getElementById("splash").style.display="none"},600);loadAll();rS();uLg();uSt()});
+map.on("moveend",function(){uSt();clearTimeout(dtTimer);dtTimer=setTimeout(function(){loadAll()},800)});
+document.getElementById("sTog").addEventListener("click",function(){sbOpen=!sbOpen;document.getElementById("sidebar").classList.toggle("collapsed",!sbOpen);document.getElementById("sTog").textContent=sbOpen?"◀":"▶";setTimeout(function(){if(map)map.resize()},350)});
+document.getElementById("sInput").addEventListener("input",function(){rS()});
+rS();
+} // end initApp
+</script>
+</body>
+</html>
