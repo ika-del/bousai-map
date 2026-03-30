@@ -18,6 +18,7 @@ git push -u origin main
 ### 2. Vercelでデプロイ
 1. https://vercel.com → Add New Project
 2. ika-del/bousai-map を選択
-3. Environment Variables に追加:
-   - `REINFOLIB_API_KEY` = `720a5c92ec3243158b065109c836e83a`
-4. Deploy
+3. Framework Preset を「Next.js」に設定
+4. Environment Variables に追加:
+   - `REINFOLIB_API_KEY` = （不動産情報ライブラリAPIで取得したキー）
+5. Deploy
