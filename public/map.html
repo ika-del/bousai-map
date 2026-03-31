@@ -43,6 +43,7 @@ body{font-family:var(--fb);overflow:hidden;background:#0F1923}
 .le{font-size:10px;color:#d32f2f;font-weight:500}
 .sf{padding:10px 16px;font-size:10px;color:#4a7c4f;border-top:1px solid var(--sb-bd);background:#dcedc8;flex-shrink:0;line-height:1.6}
 .ma{flex:1;position:relative}
+.sb-overlay{display:none}
 #map{width:100%;height:100%}
 .stb{position:absolute;top:12px;left:12px;z-index:20;width:42px;height:42px;border-radius:10px;background:rgba(255,255,255,.95);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--g9);box-shadow:0 2px 12px rgba(0,0,0,.12)}
 .stb:hover{background:var(--g0)}
@@ -67,7 +68,7 @@ body{font-family:var(--fb);overflow:hidden;background:#0F1923}
 .spc p{font-size:13px;color:#666;margin:0 0 20px;line-height:1.6}
 .spi{width:32px;height:32px;border:3px solid var(--g2);border-top-color:var(--g5);border-radius:50%;animation:spn .8s linear infinite;margin:0 auto 12px}
 @keyframes spn{to{transform:rotate(360deg)}}
-@media(max-width:768px){.sidebar{position:absolute;left:0;top:0;height:100%;z-index:30;width:300px;min-width:300px;box-shadow:0 25px 50px rgba(0,0,0,.4)}.sidebar.collapsed{transform:translateX(-300px)}.lgd{display:none}.sbar{font-size:11px;padding:6px 14px;gap:10px}}
+@media(max-width:768px){.sidebar{position:absolute;left:0;top:0;height:100%;z-index:30;width:300px;min-width:300px;box-shadow:0 25px 50px rgba(0,0,0,.4);will-change:transform;touch-action:pan-y}.sidebar.collapsed{transform:translateX(-300px)}.sidebar.dragging{transition:none!important}.lgd{display:none}.sbar{font-size:11px;padding:6px 14px;gap:10px}.sb-overlay{display:block;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:25;opacity:1;transition:opacity .3s}.sb-overlay.h{opacity:0;pointer-events:none}.stb{z-index:31}}
 </style>
 </head>
 <body>
@@ -78,6 +79,7 @@ body{font-family:var(--fb);overflow:hidden;background:#0F1923}
 <div class="sb-bd2" id="lList"></div>
 <div class="sf">出典：国土交通省 不動産情報ライブラリ API<br>© Be-kan 備館 | Powered by MapLibre GL</div>
 </aside>
+<div class="sb-overlay h" id="sbOverlay"></div>
 <main class="ma">
 <button class="stb" id="sTog">◀</button>
 <div id="map"></div>
@@ -207,7 +209,17 @@ map.addControl(new maplibregl.GeolocateControl({positionOptions:{enableHighAccur
 map.addControl(new maplibregl.ScaleControl({maxWidth:200}),"bottom-left");
 map.on("load",function(){document.getElementById("splash").classList.add("h");setTimeout(function(){document.getElementById("splash").style.display="none"},600);loadAll();rS();uLg();uSt()});
 map.on("moveend",function(){uSt();clearTimeout(dtTimer);dtTimer=setTimeout(function(){loadAll()},800)});
-document.getElementById("sTog").addEventListener("click",function(){sbOpen=!sbOpen;document.getElementById("sidebar").classList.toggle("collapsed",!sbOpen);document.getElementById("sTog").textContent=sbOpen?"◀":"▶";setTimeout(function(){if(map)map.resize()},350)});
+document.getElementById("sTog").addEventListener("click",function(){sbOpen=!sbOpen;document.getElementById("sidebar").classList.toggle("collapsed",!sbOpen);document.getElementById("sTog").textContent=sbOpen?"◀":"▶";uOv();setTimeout(function(){if(map)map.resize()},350)});
+document.getElementById("sbOverlay").addEventListener("click",function(){sbOpen=false;document.getElementById("sidebar").classList.add("collapsed");document.getElementById("sTog").textContent="▶";uOv();setTimeout(function(){if(map)map.resize()},350)});
+function uOv(){var ov=document.getElementById("sbOverlay");if(window.innerWidth<=768){ov.classList.toggle("h",!sbOpen)}else{ov.classList.add("h")}}
+(function(){var sb=document.getElementById("sidebar"),startX=0,startY=0,curX=0,dragging=false,sbW=300,edge=30;
+function isMob(){return window.innerWidth<=768}
+document.addEventListener("touchstart",function(e){if(!isMob())return;var t=e.touches[0];startX=t.clientX;startY=t.clientY;curX=startX;if(!sbOpen&&startX<edge){dragging=true;sb.classList.add("dragging")}else if(sbOpen&&startX<sbW+50){dragging=true;sb.classList.add("dragging")}},{passive:true});
+document.addEventListener("touchmove",function(e){if(!dragging||!isMob())return;var t=e.touches[0];curX=t.clientX;var dy=Math.abs(t.clientY-startY),dx=Math.abs(curX-startX);if(dy>dx&&dx<10){dragging=false;sb.classList.remove("dragging");return}var offset;if(!sbOpen){offset=Math.min(Math.max(curX-startX,0),sbW);sb.style.transform="translateX("+(offset-sbW)+"px)"}else{offset=Math.min(Math.max(curX-startX,-sbW),0);sb.style.transform="translateX("+offset+"px)"}},{passive:true});
+document.addEventListener("touchend",function(){if(!dragging||!isMob())return;dragging=false;sb.classList.remove("dragging");sb.style.transform="";var dx=curX-startX;if(!sbOpen){if(dx>60){sbOpen=true;sb.classList.remove("collapsed");document.getElementById("sTog").textContent="◀"}}else{if(dx<-60){sbOpen=false;sb.classList.add("collapsed");document.getElementById("sTog").textContent="▶"}}uOv();setTimeout(function(){if(map)map.resize()},350)},{passive:true});
+window.addEventListener("resize",function(){uOv()});
+if(isMob()){sbOpen=false;sb.classList.add("collapsed");document.getElementById("sTog").textContent="▶";uOv()}
+})();
 document.getElementById("sInput").addEventListener("input",function(){rS()});
 rS();
 } // end initApp
